@@ -1,0 +1,21 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Database (Keep your local data local!)
+db.sqlite3
+
+# OS generated files
+.DS_Store
+Thumbs.db
+*.pem
+key.pem
+cert.pem
+
+# VS Code settings
+.vscode/
