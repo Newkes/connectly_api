@@ -13,9 +13,12 @@ db.sqlite3
 # OS generated files
 .DS_Store
 Thumbs.db
+*.crt
+*.key
 *.pem
 key.pem
 cert.pem
 
 # VS Code settings
 .vscode/
+.VS

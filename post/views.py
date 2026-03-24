@@ -11,6 +11,13 @@ from django.shortcuts import get_object_or_404
 from .models import  Post, Comment
 from .serializers import UserSerializer, PostSerializer, CommentSerializer
 from .permissions import IsPostAuthor
+from singleton.logger_singleton import LoggerSingleton
+from factory.post_factory import PostFactory
+
+
+logger = LoggerSingleton().get_logger()
+
+logger.info("API initialized successfully.")
 
 class LoginView(APIView):
     authentication_classes = [SessionAuthentication, TokenAuthentication]
@@ -22,7 +29,7 @@ class LoginView(APIView):
 
        
         user = authenticate(username=username, password=password)
-
+        logger.info("login attempt.")
         if user is not None:
             login(request, user) 
 
@@ -32,10 +39,12 @@ class LoginView(APIView):
                 "token": token.key,
                 "username": user.username
             }, status=status.HTTP_200_OK)
+            logger.info("login success.")
         else:
             return Response(
                 {"error": "Invalid credentials."},
                status=status.HTTP_401_UNAUTHORIZED)
+            logger.info("login fail.")
 
 class PostDetailView(APIView):
     
@@ -43,7 +52,7 @@ class PostDetailView(APIView):
 
     def get(self, request, pk):
         post = Post.objects.get(pk=pk)
-        
+        logger.info("post id:"+ pk + " accessed")
         self.check_object_permissions(request, post)
         return Response({"content": post.content})
  
@@ -52,7 +61,8 @@ class PostDetailView(APIView):
         post = get_object_or_404(Post, pk=pk)
         self.check_object_permissions(request, post)
         post.delete()
-       
+        logger.info("post id:"+ pk + " deleted")
+        
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 class UserListCreate(APIView):
@@ -78,19 +88,40 @@ class PostListCreate(APIView):
      
     def get(self, request):
         posts = Post.objects.all()
+        logger.info("Fetching posts")
         serializer = PostSerializer(posts, many=True)
         return Response(serializer.data)
 
 
     def post(self, request):
-        serializer = PostSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
- 
+        data = request.data
+        try:
+            author = User.objects.get(id=data['author'])
 
+            post = PostFactory.create_post(
+                author=author,
+                content=data.get('content')
+            )
+
+            logger.info("post created")
+            return Response(
+                {'message': 'Post created successfully!', 'post_id': post.id},
+                status=status.HTTP_201_CREATED
+            )
+
+        except User.DoesNotExist:
+            logger.error("post not created: author not found")
+            return Response(
+                {'error': 'Author not found.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        except ValueError as e:
+            logger.error(f"post not created: {str(e)}")
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 class CommentListCreate(APIView):
     def get(self, request):
